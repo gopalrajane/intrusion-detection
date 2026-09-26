@@ -1,0 +1,7 @@
+intrusion_detector
+intrusion_detector.exe
+*.o
+*.out
+.vscode/ipch/
+.DS_Store
+Thumbs.db

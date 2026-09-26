@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Intrusion Response Console</title>
+<style>
+:root {
+  --bg: #EEF1F6;
+  --panel: #FFFFFF;
+  --panel-2: #F7F9FC;
+  --text: #101828;
+  --text-2: #475467;
+  --text-3: #98A2B3;
+  --border: #E4E7EC;
+  --accent: #2563EB;
+  --accent-bg: #EFF4FF;
+  --warn: #B45309;
+  --warn-bg: #FEF3E2;
+  --danger: #B42318;
+  --danger-bg: #FEF0EF;
+  --ok: #067647;
+  --ok-bg: #ECFDF3;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  --sans: -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+:root:not([data-theme="light"]) {
+  @media (prefers-color-scheme: dark) {
+    --bg: #0B1220;
+    --panel: #111827;
+    --panel-2: #0F1729;
+    --text: #E6EAF2;
+    --text-2: #9AA5B8;
+    --text-3: #6B7488;
+    --border: #232B3D;
+    --accent: #38BDF8;
+    --accent-bg: #0C2536;
+    --warn: #F59E0B;
+    --warn-bg: #2B2007;
+    --danger: #F87171;
+    --danger-bg: #2B1212;
+    --ok: #34D399;
+    --ok-bg: #06241A;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0B1220; --panel: #111827; --panel-2: #0F1729; --text: #E6EAF2;
+  --text-2: #9AA5B8; --text-3: #6B7488; --border: #232B3D;
+  --accent: #38BDF8; --accent-bg: #0C2536; --warn: #F59E0B; --warn-bg: #2B2007;
+  --danger: #F87171; --danger-bg: #2B1212; --ok: #34D399; --ok-bg: #06241A;
+}
+* { box-sizing: border-box; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans);
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  min-height: 100%;
+}
+.wrap { max-width: 1120px; margin: 0 auto; padding: 28px 20px 40px; }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.top h1 { font-size: 18px; font-weight: 500; margin: 0; }
+.top p { font-size: 13px; color: var(--text-2); margin: 4px 0 0; }
+button.reset {
+  background: transparent; border: 0.5px solid var(--border); color: var(--text-2);
+  font-size: 13px; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-family: var(--sans);
+}
+button.reset:hover { border-color: var(--text-3); color: var(--text); }
+
+.grid { display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 20px; align-items: start; }
+@media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+
+.card { background: var(--panel); border: 0.5px solid var(--border); border-radius: 14px; padding: 22px; }
+
+.login .badge { display: inline-block; font-size: 11px; color: var(--text-3); border: 0.5px solid var(--border); padding: 3px 9px; border-radius: 999px; margin-bottom: 14px; font-family: var(--mono); }
+.login h2 { font-size: 17px; font-weight: 500; margin: 0 0 4px; }
+.login .sub { font-size: 13px; color: var(--text-2); margin: 0 0 20px; }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 12.5px; color: var(--text-2); margin-bottom: 6px; }
+.field input {
+  width: 100%; height: 38px; border-radius: 8px; border: 0.5px solid var(--border);
+  background: var(--panel-2); color: var(--text); padding: 0 12px; font-size: 14px; font-family: var(--mono);
+}
+.field input:focus { outline: none; box-shadow: 0 0 0 2px var(--accent); border-color: var(--accent); }
+.field input:disabled { opacity: 0.5; }
+button.submit {
+  width: 100%; height: 40px; border-radius: 8px; border: none; background: var(--accent);
+  color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 4px; font-family: var(--sans);
+}
+button.submit:disabled { opacity: 0.45; cursor: not-allowed; }
+.msg { margin-top: 14px; font-size: 13px; padding: 10px 12px; border-radius: 8px; display: none; }
+.msg.show { display: block; }
+.msg.ok { background: var(--ok-bg); color: var(--ok); }
+.msg.fail { background: var(--danger-bg); color: var(--danger); }
+.msg.blocked { background: var(--danger-bg); color: var(--danger); font-family: var(--mono); }
+.err { font-size: 12px; color: var(--danger); margin-top: -8px; margin-bottom: 12px; display: none; }
+.err.show { display: block; }
+
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+@media (max-width: 560px) { .metrics { grid-template-columns: 1fr 1fr; } }
+.metric { background: var(--panel-2); border-radius: 10px; padding: 12px 14px; }
+.metric .l { font-size: 11px; color: var(--text-3); margin-bottom: 6px; }
+.metric .v { font-size: 18px; font-weight: 500; font-family: var(--mono); }
+.metric .v.warn { color: var(--warn); }
+.metric .v.danger { color: var(--danger); }
+.metric .v.ok { color: var(--ok); }
+
+.panel-title { font-size: 13px; color: var(--text-2); margin: 0 0 10px; }
+.log {
+  background: var(--panel-2); border-radius: 10px; padding: 14px 16px; height: 360px; overflow-y: auto;
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
+}
+.log .empty { color: var(--text-3); }
+.log .row { margin-bottom: 2px; white-space: pre-wrap; word-break: break-word; }
+.log .tag-log { color: var(--text-3); }
+.log .tag-struct { color: var(--accent); }
+.log .tag-warn { color: var(--warn); }
+.log .tag-danger { color: var(--danger); font-weight: 500; }
+.log .tag-ok { color: var(--ok); }
+.log .divider { border-top: 0.5px solid var(--border); margin: 8px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Intrusion Response Console</h1>
+      <p>Live demo — type a password on the left, watch the detection pipeline react on the right.</p>
+    </div>
+    <button class="reset" id="resetBtn" type="button">Reset demo</button>
+  </div>
+
+  <div class="grid">
+    <div class="card login">
+      <span class="badge">SIMULATED LOGIN</span>
+      <h2>Admin portal</h2>
+      <p class="sub">Account: <strong>admin</strong></p>
+
+      <form id="loginForm">
+        <div class="field">
+          <label for="ip">Source IP</label>
+          <input id="ip" type="text" value="203.0.113.77" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="pw">Password</label>
+          <input id="pw" type="password" placeholder="Enter password" autocomplete="off">
+        </div>
+        <div class="err" id="pwErr">Enter a password first.</div>
+        <button class="submit" id="submitBtn" type="submit">Log in</button>
+      </form>
+
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="card">
+      <div class="metrics">
+        <div class="metric"><div class="l">Failed attempts</div><div class="v" id="mCount">0</div></div>
+        <div class="metric"><div class="l">Window (45s)</div><div class="v" id="mWindow">0 / 3</div></div>
+        <div class="metric"><div class="l">Threat level</div><div class="v ok" id="mThreat">LOW</div></div>
+        <div class="metric"><div class="l">Response</div><div class="v" id="mBlock">MONITORED</div></div>
+      </div>
+      <p class="panel-title">System internals (Hash Map &middot; Queue &middot; Heap &middot; Hash Set)</p>
+      <div class="log" id="log"><div class="empty">Waiting for the first attempt&hellip;</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CORRECT_PASSWORD = "Secure@123";
+const WINDOW_MS = 45000;
+const THRESHOLD = 3;
+
+let failedTimestamps = [];
+let totalFailed = 0;
+let blocked = false;
+let blockReason = "";
+
+const logEl = document.getElementById('log');
+const form = document.getElementById('loginForm');
+const pwInput = document.getElementById('pw');
+const ipInput = document.getElementById('ip');
+const pwErr = document.getElementById('pwErr');
+const submitBtn = document.getElementById('submitBtn');
+const msgEl = document.getElementById('msg');
+
+function nowStr() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+}
+
+function addLine(text, cls) {
+  if (logEl.querySelector('.empty')) logEl.innerHTML = '';
+  const row = document.createElement('div');
+  row.className = 'row ' + (cls || 'tag-log');
+  row.textContent = text;
+  logEl.appendChild(row);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function addDivider() {
+  const d = document.createElement('div');
+  d.className = 'divider';
+  logEl.appendChild(d);
+}
+
+function updateMetrics(threatLevel) {
+  document.getElementById('mCount').textContent = totalFailed;
+  document.getElementById('mWindow').textContent = failedTimestamps.length + ' / ' + THRESHOLD;
+
+  const tEl = document.getElementById('mThreat');
+  tEl.textContent = threatLevel;
+  tEl.className = 'v ' + (threatLevel === 'HIGH' ? 'danger' : threatLevel === 'MEDIUM' ? 'warn' : 'ok');
+
+  const bEl = document.getElementById('mBlock');
+  bEl.textContent = blocked ? 'BLOCKED' : 'MONITORED';
+  bEl.className = 'v ' + (blocked ? 'danger' : 'ok');
+}
+
+function classify(count, isBrute) {
+  if (isBrute) return 'HIGH';
+  if (count >= 2) return 'MEDIUM';
+  return 'LOW';
+}
+
+function showMsg(text, cls) {
+  msgEl.textContent = text;
+  msgEl.className = 'msg show ' + cls;
+}
+
+function lockUI() {
+  pwInput.disabled = true;
+  ipInput.disabled = true;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Access denied';
+}
+
+form.addEventListener('submit', function (e) {
+  e.preventDefault();
+  pwErr.classList.remove('show');
+
+  if (blocked) {
+    addLine('[BLOCKED] ' + ipInput.value + ' rejected instantly \u2014 reason: ' + blockReason, 'tag-danger');
+    addLine('[HASH SET] O(1) membership check \u2014 no further processing performed', 'tag-struct');
+    showMsg('ACCESS DENIED \u2014 this IP is blocked.', 'blocked');
+    return;
+  }
+
+  const pw = pwInput.value;
+  if (!pw) {
+    pwErr.classList.add('show');
+    return;
+  }
+
+  const ip = ipInput.value || '203.0.113.77';
+  const ts = nowStr();
+  const success = pw === CORRECT_PASSWORD;
+
+  addDivider();
+  addLine('[LOG] ' + ts + '  ' + (success ? 'SUCCESS_LOGIN' : 'FAILED_LOGIN') + '  ' + ip + '  admin', 'tag-log');
+
+  if (success) {
+    addLine('[RESULT] Credentials matched. Access granted.', 'tag-ok');
+    showMsg('Login successful.', 'ok');
+    pwInput.value = '';
+    return;
+  }
+
+  totalFailed++;
+  const now = Date.now();
+  failedTimestamps.push(now);
+  failedTimestamps = failedTimestamps.filter(t => now - t <= WINDOW_MS);
+
+  addLine('[HASH MAP] ' + ip + ' \u2192 failed attempts: ' + totalFailed + '  (O(1) avg update)', 'tag-struct');
+
+  const isBrute = failedTimestamps.length >= THRESHOLD;
+  if (isBrute) {
+    addLine('[QUEUE] ' + failedTimestamps.length + ' failures within 45s \u2192 THRESHOLD CROSSED', 'tag-warn');
+  } else {
+    addLine('[QUEUE] ' + failedTimestamps.length + '/' + THRESHOLD + ' failures within 45s window', 'tag-struct');
+  }
+
+  const level = classify(totalFailed, isBrute);
+  addLine('[HEAP] current threat level \u2192 ' + level, level === 'HIGH' ? 'tag-danger' : level === 'MEDIUM' ? 'tag-warn' : 'tag-struct');
+
+  updateMetrics(level);
+
+  if (isBrute) {
+    blocked = true;
+    blockReason = failedTimestamps.length + ' failed attempts within 45s';
+    addLine('[HASH SET] ' + ip + ' \u2192 BLOCKED (' + blockReason + ')', 'tag-danger');
+    addLine('All further attempts from this IP will now be rejected instantly.', 'tag-danger');
+    updateMetrics('HIGH');
+    showMsg('ACCESS DENIED \u2014 too many failed attempts. IP blocked.', 'blocked');
+    lockUI();
+  } else {
+    showMsg('Login failed. Try again.', 'fail');
+  }
+
+  pwInput.value = '';
+});
+
+document.getElementById('resetBtn').addEventListener('click', function () {
+  failedTimestamps = [];
+  totalFailed = 0;
+  blocked = false;
+  blockReason = '';
+  pwInput.disabled = false;
+  ipInput.disabled = false;
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Log in';
+  pwInput.value = '';
+  msgEl.className = 'msg';
+  logEl.innerHTML = '<div class="empty">Waiting for the first attempt&hellip;</div>';
+  updateMetrics('LOW');
+});
+</script>
+</body>
+</html>

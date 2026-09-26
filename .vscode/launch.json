@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Intrusion Detector",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/intrusion_detector",
+            "args": ["data/sample_logs.txt"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "preLaunchTask": "Build Intrusion Detector",
+            "miDebuggerPath": "/usr/bin/gdb"
+        }
+    ]
+}

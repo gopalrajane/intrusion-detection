@@ -1,0 +1,37 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Intrusion Detector",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-std=c++17",
+                "-g",
+                "-Wall",
+                "-Iinclude",
+                "src/main.cpp",
+                "src/LogEntry.cpp",
+                "src/LogParser.cpp",
+                "src/MergeSort.cpp",
+                "src/LoginTracker.cpp",
+                "src/BruteForceDetector.cpp",
+                "src/IPBst.cpp",
+                "src/ThreatPrioritizer.cpp",
+                "src/BlockList.cpp",
+                "src/LiveDemo.cpp",
+                "-o",
+                "intrusion_detector"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"],
+            "detail": "Compiles all source files into the intrusion_detector executable. Press Ctrl+Shift+B to run this."
+        }
+    ]
+}
